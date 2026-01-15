@@ -38,7 +38,6 @@ const Index = () => {
   const [newComment, setNewComment] = useState('');
   const [newHomework, setNewHomework] = useState({ subject: '', class: '', task: '', dueDate: '' });
   const [newStudent, setNewStudent] = useState({ name: '', phone: '' });
-  const [students, setStudents] = useState<Student[]>([
   const [homeworks, setHomeworks] = useState<Homework[]>([
     {
       id: 1,
@@ -66,7 +65,7 @@ const Index = () => {
     },
   ]);
 
-
+  const [students, setStudents] = useState<Student[]>([
     {
       id: 1,
       name: 'Иванов Петя',
@@ -105,13 +104,14 @@ const Index = () => {
     },
   ]);
 
-  const todaySchedule: Schedule[] = [
+  const [schedule, setSchedule] = useState<Schedule[]>([
     { time: '08:30', subject: 'Математика', class: '5А' },
     { time: '09:30', subject: 'Русский язык', class: '5Б' },
     { time: '10:30', subject: 'Физика', class: '6А' },
     { time: '11:30', subject: 'Математика', class: '6Б' },
     { time: '12:30', subject: 'Литература', class: '5А' },
-  ];
+  ]);
+  const [newSchedule, setNewSchedule] = useState({ time: '', subject: '', class: '' });
 
   const stats = {
     totalStudents: students.length,
@@ -120,7 +120,7 @@ const Index = () => {
       students.length
     ).toFixed(1),
     recentComments: students.reduce((sum, s) => sum + s.comments.length, 0),
-    todayLessons: todaySchedule.length,
+    todayLessons: schedule.length,
   };
 
   const getGradeColor = (grade: number) => {
@@ -190,6 +190,17 @@ const Index = () => {
     if (selectedStudent?.id === id) {
       setSelectedStudent(null);
     }
+  };
+
+  const addSchedule = () => {
+    if (newSchedule.time && newSchedule.subject && newSchedule.class) {
+      setSchedule([...schedule, { ...newSchedule }]);
+      setNewSchedule({ time: '', subject: '', class: '' });
+    }
+  };
+
+  const deleteSchedule = (index: number) => {
+    setSchedule(schedule.filter((_, i) => i !== index));
   };
 
   return (
@@ -305,7 +316,7 @@ const Index = () => {
                   <CardDescription>Среда, 15 января 2026</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {todaySchedule.map((lesson, idx) => (
+                  {schedule.slice(0, 5).map((lesson, idx) => (
                     <div
                       key={idx}
                       className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
@@ -707,33 +718,69 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="schedule" className="space-y-6 animate-fade-in">
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Icon name="Plus" size={20} />
+                  Добавить урок в расписание
+                </CardTitle>
+                <CardDescription>Добавьте новый урок в расписание</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <Input
+                    type="time"
+                    placeholder="Время"
+                    value={newSchedule.time}
+                    onChange={(e) => setNewSchedule({ ...newSchedule, time: e.target.value })}
+                  />
+                  <Input
+                    placeholder="Предмет"
+                    value={newSchedule.subject}
+                    onChange={(e) => setNewSchedule({ ...newSchedule, subject: e.target.value })}
+                  />
+                  <Input
+                    placeholder="Класс (например, 5А)"
+                    value={newSchedule.class}
+                    onChange={(e) => setNewSchedule({ ...newSchedule, class: e.target.value })}
+                  />
+                  <Button onClick={addSchedule} className="gap-2">
+                    <Icon name="Check" size={18} />
+                    Добавить
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Icon name="Calendar" size={20} />
-                  Расписание уроков на неделю
+                  Расписание уроков
                 </CardTitle>
-                <CardDescription>15 - 19 января 2026</CardDescription>
+                <CardDescription>Все уроки в порядке времени</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  {['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница'].map((day, dayIdx) => (
-                    <div key={dayIdx}>
-                      <h3 className="font-semibold mb-3 text-primary">{day}</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {todaySchedule.slice(0, dayIdx + 2).map((lesson, lessonIdx) => (
-                          <div
-                            key={lessonIdx}
-                            className="p-4 bg-gradient-to-br from-muted/50 to-muted/30 rounded-lg hover:shadow-md transition-shadow"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-semibold text-primary">{lesson.time}</span>
-                              <Badge variant="outline">{lesson.class}</Badge>
-                            </div>
-                            <p className="font-medium">{lesson.subject}</p>
-                          </div>
-                        ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {schedule.map((lesson, idx) => (
+                    <div
+                      key={idx}
+                      className="p-4 bg-gradient-to-br from-muted/50 to-muted/30 rounded-lg hover:shadow-md transition-shadow relative group"
+                    >
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => deleteSchedule(idx)}
+                        title="Удалить урок"
+                      >
+                        <Icon name="Trash2" size={16} />
+                      </Button>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-primary">{lesson.time}</span>
+                        <Badge variant="outline">{lesson.class}</Badge>
                       </div>
+                      <p className="font-medium">{lesson.subject}</p>
                     </div>
                   ))}
                 </div>

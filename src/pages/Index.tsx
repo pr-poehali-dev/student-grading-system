@@ -132,15 +132,81 @@ const Index = () => {
 
   const addGrade = () => {
     if (selectedStudent && newGrade.subject && newGrade.grade) {
-      console.log('Добавлена оценка:', newGrade);
-      setNewGrade({ subject: '', grade: '' });
+      const gradeNum = parseInt(newGrade.grade);
+      if (gradeNum >= 2 && gradeNum <= 5) {
+        const updatedStudents = students.map(s => {
+          if (s.id === selectedStudent.id) {
+            return {
+              ...s,
+              grades: [...s.grades, {
+                subject: newGrade.subject,
+                grade: gradeNum,
+                date: new Date().toISOString().split('T')[0]
+              }]
+            };
+          }
+          return s;
+        });
+        setStudents(updatedStudents);
+        const updated = updatedStudents.find(s => s.id === selectedStudent.id);
+        if (updated) setSelectedStudent(updated);
+        setNewGrade({ subject: '', grade: '' });
+      }
+    }
+  };
+
+  const deleteGrade = (studentId: number, gradeIndex: number) => {
+    const updatedStudents = students.map(s => {
+      if (s.id === studentId) {
+        return {
+          ...s,
+          grades: s.grades.filter((_, idx) => idx !== gradeIndex)
+        };
+      }
+      return s;
+    });
+    setStudents(updatedStudents);
+    const updated = updatedStudents.find(s => s.id === studentId);
+    if (updated && selectedStudent?.id === studentId) {
+      setSelectedStudent(updated);
     }
   };
 
   const addComment = () => {
     if (selectedStudent && newComment) {
-      console.log('Добавлен комментарий:', newComment);
+      const updatedStudents = students.map(s => {
+        if (s.id === selectedStudent.id) {
+          return {
+            ...s,
+            comments: [...s.comments, {
+              text: newComment,
+              date: new Date().toISOString().split('T')[0]
+            }]
+          };
+        }
+        return s;
+      });
+      setStudents(updatedStudents);
+      const updated = updatedStudents.find(s => s.id === selectedStudent.id);
+      if (updated) setSelectedStudent(updated);
       setNewComment('');
+    }
+  };
+
+  const deleteComment = (studentId: number, commentIndex: number) => {
+    const updatedStudents = students.map(s => {
+      if (s.id === studentId) {
+        return {
+          ...s,
+          comments: s.comments.filter((_, idx) => idx !== commentIndex)
+        };
+      }
+      return s;
+    });
+    setStudents(updatedStudents);
+    const updated = updatedStudents.find(s => s.id === studentId);
+    if (updated && selectedStudent?.id === studentId) {
+      setSelectedStudent(updated);
     }
   };
 
@@ -379,98 +445,180 @@ const Index = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Icon name="BookOpen" size={20} />
-                  Выставление оценок и замечаний
+                  Полный журнал оценок
                 </CardTitle>
-                <CardDescription>Выберите ученика для добавления оценки или комментария</CardDescription>
+                <CardDescription>Таблица с оценками всех учеников по предметам</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {students.map((student) => (
-                    <Button
-                      key={student.id}
-                      variant={selectedStudent?.id === student.id ? 'default' : 'outline'}
-                      className="h-auto py-3 justify-start gap-3"
-                      onClick={() => setSelectedStudent(student)}
-                    >
-                      <Avatar className="w-8 h-8">
-                        <AvatarFallback className="text-xs">
-                          {student.name.split(' ')[1][0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-left">{student.name}</span>
-                    </Button>
-                  ))}
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-muted/50">
+                        <th className="border border-border p-3 text-left font-semibold">Ученик</th>
+                        {['Математика', 'Русский язык', 'Физика', 'Литература', 'История'].map(subject => (
+                          <th key={subject} className="border border-border p-3 text-center font-semibold min-w-[120px]">
+                            {subject}
+                          </th>
+                        ))}
+                        <th className="border border-border p-3 text-center font-semibold">Средний балл</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {students.map((student) => {
+                        const avgGrade = student.grades.length > 0
+                          ? (student.grades.reduce((sum, g) => sum + g.grade, 0) / student.grades.length).toFixed(1)
+                          : '—';
+                        
+                        return (
+                          <tr key={student.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="border border-border p-3">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="w-8 h-8">
+                                  <AvatarFallback className="text-xs bg-primary/20 text-primary">
+                                    {student.name.split(' ')[1]?.[0] || student.name[0]}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium">{student.name}</span>
+                              </div>
+                            </td>
+                            {['Математика', 'Русский язык', 'Физика', 'Литература', 'История'].map(subject => {
+                              const subjectGrades = student.grades.filter(g => g.subject === subject);
+                              return (
+                                <td key={subject} className="border border-border p-2 text-center">
+                                  <div className="flex flex-wrap gap-1 justify-center">
+                                    {subjectGrades.map((grade, idx) => (
+                                      <Badge 
+                                        key={idx} 
+                                        className={`${getGradeColor(grade.grade)} cursor-pointer hover:opacity-80`}
+                                        onClick={() => deleteGrade(student.id, student.grades.indexOf(grade))}
+                                        title={`${grade.date} - Нажмите для удаления`}
+                                      >
+                                        {grade.grade}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </td>
+                              );
+                            })}
+                            <td className="border border-border p-3 text-center">
+                              <span className="font-bold text-lg text-primary">{avgGrade}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
 
-                {selectedStudent && (
-                  <div className="space-y-6 p-6 bg-muted/30 rounded-xl animate-scale-in">
-                    <div>
-                      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <Icon name="Plus" size={18} />
-                        Добавить оценку
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <Input
-                          placeholder="Предмет"
-                          value={newGrade.subject}
-                          onChange={(e) => setNewGrade({ ...newGrade, subject: e.target.value })}
-                        />
-                        <Input
-                          type="number"
-                          placeholder="Оценка (2-5)"
-                          min="2"
-                          max="5"
-                          value={newGrade.grade}
-                          onChange={(e) => setNewGrade({ ...newGrade, grade: e.target.value })}
-                        />
-                        <Button onClick={addGrade} className="gap-2">
-                          <Icon name="Check" size={18} />
-                          Добавить
+                <div className="mt-6 p-6 bg-primary/5 rounded-xl space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Icon name="UserPlus" size={18} />
+                      Выберите ученика
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {students.map((student) => (
+                        <Button
+                          key={student.id}
+                          variant={selectedStudent?.id === student.id ? 'default' : 'outline'}
+                          className="h-auto py-3 justify-start gap-3"
+                          onClick={() => setSelectedStudent(student)}
+                        >
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback className="text-xs">
+                              {student.name.split(' ')[1]?.[0] || student.name[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-left">{student.name}</span>
                         </Button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <Icon name="MessageSquare" size={18} />
-                        Добавить замечание
-                      </h3>
-                      <div className="flex gap-3">
-                        <Textarea
-                          placeholder="Текст замечания..."
-                          value={newComment}
-                          onChange={(e) => setNewComment(e.target.value)}
-                          className="flex-1"
-                        />
-                        <Button onClick={addComment} className="gap-2">
-                          <Icon name="Send" size={18} />
-                          Отправить
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <Icon name="History" size={18} />
-                        История оценок
-                      </h3>
-                      <div className="space-y-2">
-                        {selectedStudent.grades.map((grade, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between p-3 bg-white rounded-lg"
-                          >
-                            <div>
-                              <p className="font-medium">{grade.subject}</p>
-                              <p className="text-sm text-muted-foreground">{grade.date}</p>
-                            </div>
-                            <Badge className={getGradeColor(grade.grade)}>{grade.grade}</Badge>
-                          </div>
-                        ))}
-                      </div>
+                      ))}
                     </div>
                   </div>
-                )}
+
+                  {selectedStudent && (
+                    <div className="space-y-6 animate-scale-in">
+                      <div className="p-4 bg-white rounded-lg">
+                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                          <Icon name="Plus" size={18} />
+                          Добавить оценку для {selectedStudent.name}
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <select
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            value={newGrade.subject}
+                            onChange={(e) => setNewGrade({ ...newGrade, subject: e.target.value })}
+                          >
+                            <option value="">Выберите предмет</option>
+                            <option value="Математика">Математика</option>
+                            <option value="Русский язык">Русский язык</option>
+                            <option value="Физика">Физика</option>
+                            <option value="Литература">Литература</option>
+                            <option value="История">История</option>
+                          </select>
+                          <div className="flex gap-2">
+                            {[2, 3, 4, 5].map(grade => (
+                              <Button
+                                key={grade}
+                                variant={newGrade.grade === grade.toString() ? 'default' : 'outline'}
+                                className={`flex-1 ${newGrade.grade === grade.toString() ? getGradeColor(grade) : ''}`}
+                                onClick={() => setNewGrade({ ...newGrade, grade: grade.toString() })}
+                              >
+                                {grade}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                        <Button onClick={addGrade} className="w-full mt-3 gap-2" disabled={!newGrade.subject || !newGrade.grade}>
+                          <Icon name="Check" size={18} />
+                          Добавить оценку
+                        </Button>
+                      </div>
+
+                      <div className="p-4 bg-white rounded-lg">
+                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                          <Icon name="MessageSquare" size={18} />
+                          Замечания для {selectedStudent.name}
+                        </h3>
+                        <div className="space-y-3">
+                          <div className="flex gap-3">
+                            <Textarea
+                              placeholder="Текст замечания..."
+                              value={newComment}
+                              onChange={(e) => setNewComment(e.target.value)}
+                              className="flex-1"
+                              rows={2}
+                            />
+                            <Button onClick={addComment} className="gap-2" disabled={!newComment}>
+                              <Icon name="Send" size={18} />
+                              Добавить
+                            </Button>
+                          </div>
+                          {selectedStudent.comments.length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium">Все замечания:</p>
+                              {selectedStudent.comments.map((comment, idx) => (
+                                <div key={idx} className="flex items-start justify-between p-3 bg-muted/50 rounded-lg group">
+                                  <div className="flex-1">
+                                    <p className="text-sm">{comment.text}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">{comment.date}</p>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => deleteComment(selectedStudent.id, idx)}
+                                  >
+                                    <Icon name="Trash2" size={16} className="text-destructive" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

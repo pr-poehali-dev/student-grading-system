@@ -37,6 +37,8 @@ const Index = () => {
   const [newGrade, setNewGrade] = useState({ subject: '', grade: '' });
   const [newComment, setNewComment] = useState('');
   const [newHomework, setNewHomework] = useState({ subject: '', class: '', task: '', dueDate: '' });
+  const [newStudent, setNewStudent] = useState({ name: '', phone: '' });
+  const [students, setStudents] = useState<Student[]>([
   const [homeworks, setHomeworks] = useState<Homework[]>([
     {
       id: 1,
@@ -64,7 +66,7 @@ const Index = () => {
     },
   ]);
 
-  const students: Student[] = [
+
     {
       id: 1,
       name: 'Иванов Петя',
@@ -101,7 +103,7 @@ const Index = () => {
         { text: 'Нужно подтянуть знания по математике', date: '2026-01-15' },
       ],
     },
-  ];
+  ]);
 
   const todaySchedule: Schedule[] = [
     { time: '08:30', subject: 'Математика', class: '5А' },
@@ -167,6 +169,27 @@ const Index = () => {
 
   const deleteHomework = (id: number) => {
     setHomeworks(homeworks.filter((hw) => hw.id !== id));
+  };
+
+  const addStudent = () => {
+    if (newStudent.name && newStudent.phone) {
+      const student: Student = {
+        id: Date.now(),
+        name: newStudent.name,
+        phone: newStudent.phone,
+        grades: [],
+        comments: [],
+      };
+      setStudents([...students, student]);
+      setNewStudent({ name: '', phone: '' });
+    }
+  };
+
+  const deleteStudent = (id: number) => {
+    setStudents(students.filter((s) => s.id !== id));
+    if (selectedStudent?.id === id) {
+      setSelectedStudent(null);
+    }
   };
 
   return (
@@ -588,14 +611,53 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="students" className="space-y-6 animate-fade-in">
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Icon name="UserPlus" size={20} />
+                  Добавить ученика
+                </CardTitle>
+                <CardDescription>Добавьте нового ученика в базу</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-3">
+                  <Input
+                    placeholder="ФИО ученика"
+                    value={newStudent.name}
+                    onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
+                    className="flex-1"
+                  />
+                  <Input
+                    placeholder="Номер телефона"
+                    value={newStudent.phone}
+                    onChange={(e) => setNewStudent({ ...newStudent, phone: e.target.value })}
+                    className="flex-1"
+                  />
+                  <Button onClick={addStudent} className="gap-2">
+                    <Icon name="Plus" size={18} />
+                    Добавить
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {students.map((student) => (
-                <Card key={student.id} className="hover:shadow-lg transition-shadow">
+                <Card key={student.id} className="hover:shadow-lg transition-shadow relative">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => deleteStudent(student.id)}
+                    title="Удалить ученика"
+                  >
+                    <Icon name="Trash2" size={16} />
+                  </Button>
                   <CardHeader>
                     <div className="flex items-center gap-3">
                       <Avatar className="w-12 h-12">
                         <AvatarFallback className="bg-primary/20 text-primary text-lg font-semibold">
-                          {student.name.split(' ')[1][0]}
+                          {student.name.split(' ')[1]?.[0] || student.name[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -614,11 +676,15 @@ const Index = () => {
                         Последние оценки
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {student.grades.slice(0, 5).map((grade, idx) => (
-                          <Badge key={idx} className={getGradeColor(grade.grade)} variant="secondary">
-                            {grade.subject.substring(0, 3)}: {grade.grade}
-                          </Badge>
-                        ))}
+                        {student.grades.length > 0 ? (
+                          student.grades.slice(0, 5).map((grade, idx) => (
+                            <Badge key={idx} className={getGradeColor(grade.grade)} variant="secondary">
+                              {grade.subject.substring(0, 3)}: {grade.grade}
+                            </Badge>
+                          ))
+                        ) : (
+                          <p className="text-xs text-muted-foreground">Оценок пока нет</p>
+                        )}
                       </div>
                     </div>
                     <div>
